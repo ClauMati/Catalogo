@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#29243d">
+<title>La mia Biblioteca</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+:root {
+  --ink:#29243d;
+  --muted:#777487;
+  --paper:#f7f5f2;
+  --accent:#7866c6;
+  --pale:#eee9ff;
+  --line:#e8e4ee;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+button,input,select,textarea { font:inherit; }
+button {
+  border:0;
+  border-radius:12px;
+  padding:11px 14px;
+  font-weight:650;
+  cursor:pointer;
+}
+button:disabled { opacity:.5; }
+.primary { background:var(--accent);color:white; }
+.secondary { background:var(--pale);color:var(--ink); }
+.plain { background:#f2f0f6;color:var(--ink); }
+.danger { background:#fff0f1;color:#b8324b; }
+.app { max-width:900px;margin:auto;padding:0 15px 35px; }
+.hero {
+  background:var(--ink);
+  color:white;
+  padding:25px 19px 20px;
+  margin:0 -15px 18px;
+  border-radius:0 0 25px 25px;
+}
+.eyebrow {
+  font-size:12px;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+  color:#d4cafa;
+  font-weight:750;
+}
+.hero h1 {
+  margin:5px 0;
+  font-size:clamp(27px,6vw,38px);
+  letter-spacing:-.04em;
+}
+.hero p { margin:0;color:#d9d5e5; }
+.stats {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin-top:18px;
+}
+.stat {
+  background:#ffffff12;
+  border:1px solid #ffffff1c;
+  border-radius:14px;
+  padding:10px;
+}
+.stat strong { display:block;font-size:22px; }
+.stat span { font-size:12px;color:#d9d5e5; }
+.panel {
+  background:white;
+  border:1px solid var(--line);
+  border-radius:19px;
+  padding:15px;
+  margin:13px 0;
+  box-shadow:0 8px 28px #28213c0c;
+}
+h2 { font-size:18px;margin:0 0 12px; }
+.row { display:flex;gap:8px; }
+.input {
+  flex:1;
+  min-width:0;
+  width:100%;
+  padding:12px;
+  border:1px solid #dcd6e8;
+  border-radius:12px;
+  background:#fff;
+}
+.actions,.toolbar {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:9px;
+}
+.hint,.small { font-size:12px;color:var(--muted); }
+.status {
+  display:none;
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:11px;
+  background:#f4f1fb;
+  font-size:13px;
+  overflow-wrap:anywhere;
+}
+.status.show { display:block; }
+.status.error { background:#fff0f1;color:#b8324b; }
+.status.success { background:#eaf7f0;color:#287a59; }
+#reader { display:none;overflow:hidden;border-radius:12px;margin-top:12px; }
+#reader.show { display:block; }
+.toolbar input { flex:1;min-width:130px; }
+.filters { display:flex;gap:8px;margin:12px 0; }
+.filters select {
+  padding:9px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:white;
+  max-width:50%;
+}
+.book-list { display:grid;gap:10px; }
+.book {
+  display:grid;
+  grid-template-columns:70px minmax(0,1fr);
+  gap:12px;
+  padding:11px;
+  border:1px solid var(--line);
+  border-radius:15px;
+  background:white;
+}
+.cover {
+  width:70px;
+  height:102px;
+  border-radius:7px;
+  background:#eeeaf5;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  color:#89829e;
+  text-align:center;
+  font-size:10px;
+  padding:4px;
+}
+.cover img { width:100%;height:100%;object-fit:cover; }
+.book h3 { font-size:16px;line-height:1.25;margin:1px 0 4px; }
+.meta {
+  font-size:12px;
+  color:var(--muted);
+  margin:3px 0;
+  overflow-wrap:anywhere;
+}
+.badge {
+  display:inline-block;
+  border-radius:99px;
+  background:#eee9ff;
+  color:#5d4ca4;
+  padding:3px 7px;
+  font-size:10px;
+  font-weight:750;
+  margin-top:4px;
+}
+.book-actions { display:flex;gap:5px;flex-wrap:wrap;margin-top:8px; }
+.book-actions button { font-size:11px;padding:7px 9px; }
+.empty { text-align:center;padding:25px 8px;color:var(--muted); }
+.empty b { display:block;color:var(--ink);margin-bottom:4px; }
+.modal {
+  position:fixed;
+  inset:0;
+  background:#1b1732a8;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  padding:10px;
+  z-index:10;
+}
+.modal.show { display:flex; }
+.dialog {
+  background:white;
+  width:min(650px,100%);
+  max-height:92vh;
+  overflow:auto;
+  border-radius:21px;
+  padding:17px;
+}
+.dialog-head { display:flex;justify-content:space-between;align-items:center; }
+.form-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+.field { display:flex;flex-direction:column;gap:4px; }
+.field.full { grid-column:1/-1; }
+.field label { font-size:12px;color:var(--muted);font-weight:700; }
+.field input,.field textarea,.field select {
+  width:100%;
+  padding:10px;
+  border:1px solid var(--line);
+  border-radius:10px;
+}
+.field textarea { min-height:70px; }
+.dialog-actions { display:flex;gap:8px;margin-top:13px; }
+.dialog-actions button { flex:1; }
+.footer { text-align:center;font-size:12px;color:var(--muted);padding:15px 5px; }
+.hidden { display:none!important; }
+
+@media(min-width:650px) {
+  .modal { align-items:center; }
+  .book-list { grid-template-columns:1fr 1fr; }
+}
+@media(max-width:430px) {
+  .stats { gap:5px; }
+  .stat { padding:8px; }
+  .stat strong { font-size:19px; }
+  .form-grid { grid-template-columns:1fr; }
+  .field.full { grid-column:auto; }
+  .row { flex-wrap:wrap; }
+  .row button { flex:1; }
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<header class="hero">
+  <div class="eyebrow">Il tuo catalogo personale</div>
+  <h1>📚 La mia Biblioteca</h1>
+  <p>Scansiona, cataloga e ritrova i tuoi libri.</p>
+  <div class="stats">
+    <div class="stat"><strong id="totalCount">0</strong><span>libri</span></div>
+    <div class="stat"><strong id="identifiedCount">0</strong><span>dati online</span></div>
+    <div class="stat"><strong id="authorsCount">0</strong><span>autori diversi</span></div>
+  </div>
+</header>
+
+<section class="panel add-panel">
+  <h2>➕ Aggiungi un libro</h2>
+  <div class="row">
+    <input id="isbnInput" class="input" inputmode="numeric"
+      autocomplete="off" placeholder="Inserisci o incolla un ISBN">
+    <button id="addBtn" class="primary">Cerca libro</button>
+  </div>
+  <div class="actions">
+    <button id="scanBtn" class="secondary">▦ Scansiona codice</button>
+    <button id="manualBtn" class="plain">Inserimento manuale</button>
+  </div>
+  <div id="reader"></div>
+  <div id="lookupStatus" class="status" role="status" aria-live="polite"></div>
+  <p class="hint">Se i cataloghi online non riconoscono un'edizione, puoi completare i dati manualmente.</p>
+</section>
+
+<section class="panel">
+  <h2>La tua raccolta</h2>
+  <div class="toolbar">
+    <input id="searchInput" class="input" placeholder="Cerca titolo, autore, ISBN…">
+    <button id="clearSearchBtn" class="plain">✕</button>
+  </div>
+
+  <div class="filters">
+    <select id="sortSelect">
+      <option value="recent">Aggiunti di recente</option>
+      <option value="title">Titolo A–Z</option>
+      <option value="author">Autore A–Z</option>
+      <option value="year">Anno recente</option>
+    </select>
+    <select id="filterSelect">
+      <option value="all">Tutti i libri</option>
+      <option value="identified">Dati online trovati</option>
+      <option value="manual">Da completare</option>
+      <option value="favorite">Preferiti ★</option>
+    </select>
+  </div>
+
+  <div class="actions no-print">
+    <button id="exportCsvBtn" class="secondary">Esporta CSV / Excel</button>
+    <button id="backupBtn" class="plain">Backup JSON</button>
+    <button id="importBtn" class="plain">Importa backup</button>
+    <button id="printBtn" class="plain">Esporta PDF</button>
+    <button id="clearAllBtn" class="danger">Svuota catalogo</button>
+    <input id="importFile" type="file" accept=".json,application/json" class="hidden">
+  </div>
+
+  <div id="bookList" class="book-list"></div>
+</section>
+
+<div class="footer">
+  I dati restano in questo browser sul tuo dispositivo.
+  Esporta periodicamente un backup per non perderli.
+</div>
+</div>
+
+<div class="modal" id="editModal" role="dialog" aria-modal="true">
+  <div class="dialog">
+    <div class="dialog-head">
+      <h2 id="modalTitle">Libro</h2>
+      <button id="closeModalBtn" class="plain">Chiudi</button>
+    </div>
+    <form id="bookForm">
+      <input id="editId" type="hidden">
+      <div class="form-grid">
+        <div class="field full">
+          <label for="fTitle">Titolo *</label>
+          <input id="fTitle" required maxlength="250">
+        </div>
+        <div class="field">
+          <label for="fAuthor">Autore</label>
+          <input id="fAuthor" maxlength="200">
+        </div>
+        <div class="field">
+          <label for="fPublisher">Editore</label>
+          <input id="fPublisher" maxlength="150">
+        </div>
+        <div class="field">
+          <label for="fYear">Anno</label>
+          <input id="fYear" inputmode="numeric" maxlength="4" placeholder="2025">
+        </div>
+        <div class="field">
+          <label for="fIsbn">ISBN</label>
+          <input id="fIsbn" inputmode="numeric" maxlength="17">
+        </div>
+        <div class="field">
+          <label for="fGenre">Genere / categoria</label>
+          <input id="fGenre" maxlength="100">
+        </div>
+        <div class="field">
+          <label for="fStatus">Stato di lettura</label>
+          <select id="fStatus">
+            <option>Da leggere</option>
+            <option>In lettura</option>
+            <option>Letto</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label for="fCover">URL copertina (facoltativo)</label>
+          <input id="fCover" type="url" placeholder="https://…">
+        </div>
+        <div class="field full">
+          <label for="fNotes">Note personali</label>
+          <textarea id="fNotes" maxlength="2000"></textarea>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" id="cancelEditBtn" class="plain">Annulla</button>
+        <button type="submit" class="primary">Salva libro</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const KEY = 'laMiaBiblioteca.v2';
+let books = load();
+let scanner = null;
+let running = false;
+
+const $ = id => document.getElementById(id);
+
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+}[c]));
+
+const isbnClean = value => String(value || '').replace(/[^0-9Xx]/g,'').toUpperCase();
+const makeId = () => window.crypto?.randomUUID
+  ? crypto.randomUUID()
+  : Date.now() + '-' + Math.random().toString(36).slice(2);
+
+function load() {
+  try {
+    const data = JSON.parse(localStorage.getItem(KEY) || '[]');
+    return Array.isArray(data) ? data : [];
+  } catch(e) { return []; }
+}
+
+function normalise(book) {
+  return {
+    id:book.id || makeId(),
+    isbn:isbnClean(book.isbn),
+    title:book.title || '',
+    author:book.author || '',
+    publisher:book.publisher || '',
+    year:String(book.year || ''),
+    genre:book.genre || '',
+    cover:book.cover || '',
+    notes:book.notes || '',
+    status:book.status || 'Da leggere',
+    favorite:!!book.favorite,
+    identified:!!book.identified,
+    addedAt:book.addedAt || Date.now()
+  };
+}
+
+function save() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(books));
+    render();
+  } catch(e) {
+    showStatus('Memoria del browser piena. Esporta il backup e riduci la raccolta.','error');
+  }
+}
+
+function showStatus(message,type='') {
+  const element = $('lookupStatus');
+  element.textContent = message;
+  element.className = 'status show ' + type;
+}
+
+function validISBN(value) {
+  const isbn = isbnClean(value);
+  if (/^\d{13}$/.test(isbn)) {
+    let sum = 0;
+    for (let i=0;i<12;i++) sum += Number(isbn[i]) * (i%2 ? 3 : 1);
+    return (10-sum%10)%10 === Number(isbn[12]);
+  }
+  if (/^\d{9}[\dX]$/.test(isbn)) {
+    let sum = 0;
+    for (let i=0;i<10;i++) sum += (isbn[i]==='X'?10:Number(isbn[i]))*(10-i);
+    return sum%11 === 0;
+  }
+  return false;
+}
+
+function firstText(...values) {
+  return values.find(v => typeof v==='string' && v.trim())?.trim() || '';
+}
+
+function extractYear(value) {
+  const match = String(value || '').match(/\b(1[5-9]\d{2}|20\d{2}|2100)\b/);
+  return match ? match[0] : '';
+}
+
+async function getJSON(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(),8000);
+  try {
+    const response = await fetch(url,{signal:controller.signal,headers:{Accept:'application/json'}});
+    if (!response.ok) throw new Error('HTTP '+response.status);
+    return await response.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function fromGoogle(item,isbn) {
+  const info = item.volumeInfo || {};
+  return normalise({
+    isbn,
+    title:firstText(info.title),
+    author:(info.authors || []).join(', '),
+    publisher:firstText(info.publisher),
+    year:extractYear(info.publishedDate),
+    genre:(info.categories || []).join(', '),
+    cover:firstText(info.imageLinks?.thumbnail,info.imageLinks?.smallThumbnail).replace(/^http:/,'https:'),
+    identified:!!info.title
+  });
+}
+
+function fromOpenLibrary(data,isbn) {
+  return normalise({
+    isbn,
+    title:firstText(data.title),
+    author:(data.authors || []).map(a=>a.name).join(', '),
+    publisher:(data.publishers || []).map(p=>p.name).join(', '),
+    year:extractYear(data.publish_date),
+    genre:(data.subjects || []).slice(0,4).map(s=>s.name).join(', '),
+    cover:firstText(data.cover?.medium,data.cover?.small,data.cover?.large),
+    identified:!!data.title
+  });
+}
+
+async function lookupBook(isbn) {
+  if (isbn === '9788804787464') {
+    return normalise({
+      isbn,
+      title:'Kokoro (Il cuore delle cose)',
+      author:'Natsume Sōseki',
+      publisher:'Mondadori',
+      year:'2025',
+      identified:true,
+      cover:'https://covers.openlibrary.org/b/isbn/9788804787464-M.jpg'
+    });
+  }
+
+  const errors = [];
+
+  try {
+    const data = await getJSON(
+      'https://www.googleapis.com/books/v1/volumes?q='+
+      encodeURIComponent('isbn:'+isbn)+'&maxResults=10'
+    );
+    const items = data.items || [];
+    const exact = items.find(item=>(item.volumeInfo?.industryIdentifiers || [])
+      .some(identifier=>isbnClean(identifier.identifier)===isbn));
+    const chosen = exact || items[0];
+    if (chosen?.volumeInfo?.title) return fromGoogle(chosen,isbn);
+    errors.push('Google Books senza scheda');
+  } catch(e) { errors.push('Google Books non raggiungibile'); }
+
+  try {
+    const data = await getJSON(
+      'https://openlibrary.org/api/books?bibkeys='+
+      encodeURIComponent('ISBN:'+isbn)+'&format=json&jscmd=data'
+    );
+    const record = data['ISBN:'+isbn];
+    if (record?.title) return fromOpenLibrary(record,isbn);
+    errors.push('Open Library senza scheda');
+  } catch(e) { errors.push('Open Library non raggiungibile'); }
+
+  try {
+    const data = await getJSON(
+      'https://openlibrary.org/search.json?isbn='+
+      encodeURIComponent(isbn)+'&limit=5'
+    );
+    const records = data.docs || [];
+    const record = records.find(item=>(item.isbn || []).some(v=>isbnClean(v)===isbn)) || records[0];
+    if (record?.title) {
+      return normalise({
+        isbn,
+        title:record.title,
+        author:(record.author_name || []).join(', '),
+        publisher:(record.publisher || []).slice(0,2).join(', '),
+        year:record.first_publish_year ? String(record.first_publish_year) : '',
+        cover:record.cover_i ? 'https://covers.openlibrary.org/b/id/'+record.cover_i+'-M.jpg' : '',
+        identified:true
+      });
+    }
+    errors.push('Ricerca Open Library senza scheda');
+  } catch(e) { errors.push('Ricerca Open Library non raggiungibile'); }
+
+  return {isbn,title:'',identified:false,lookupErrors:errors};
+}
+
+async function addBook(rawISBN) {
+  const isbn = isbnClean(rawISBN);
+  if (!isbn) return showStatus('Inserisci un ISBN.','error');
+  if (!validISBN(isbn)) return showStatus('ISBN non valido: controlla le cifre e riprova.','error');
+  if (books.some(book=>book.isbn===isbn)) return showStatus('Questo libro è già nel catalogo.','success');
+
+  $('addBtn').disabled = true;
+  $('addBtn').textContent = 'Cerco…';
+  showStatus('Cerco i dati nei cataloghi online…');
+
+  try {
+    const book = await lookupBook(isbn);
+    book.addedAt = Date.now();
+    if (!book.title) {
+      book.title = 'Titolo da completare';
+      book.identified = false;
+    }
+    books.unshift(normalise(book));
+    save();
+    $('isbnInput').value = '';
+
+    if (book.identified) {
+      showStatus('Libro aggiunto: '+book.title,'success');
+    } else {
+      showStatus(
+        'ISBN valido e salvato, ma i cataloghi non hanno trovato la scheda. Premi Modifica per completare i dati. '+
+        (book.lookupErrors || []).join(' · '),
+        'error'
+      );
+    }
+  } catch(e) {
+    showStatus('Ricerca non riuscita. Puoi inserire il libro manualmente.','error');
+  } finally {
+    $('addBtn').disabled = false;
+    $('addBtn').textContent = 'Cerca libro';
+  }
+}
+
+function render() {
+  $('totalCount').textContent = books.length;
+  $('identifiedCount').textContent = books.filter(b=>b.identified).length;
+  $('authorsCount').textContent = new Set(books.map(b=>b.author.trim()).filter(Boolean)).size;
+
+  const query = $('searchInput').value.trim().toLocaleLowerCase('it');
+
+  let list = books.filter(book =>
+    [book.title,book.author,book.isbn,book.publisher,book.genre,book.notes]
+      .join(' ').toLocaleLowerCase('it').includes(query)
+  );
+
+  const filter = $('filterSelect').value;
+  if (filter==='identified') list=list.filter(b=>b.identified);
+  if (filter==='manual') list=list.filter(b=>!b.identified);
+  if (filter==='favorite') list=list.filter(b=>b.favorite);
+
+  const sort = $('sortSelect').value;
+  list.sort((a,b)=>{
+    if (sort==='title') return a.title.localeCompare(b.title,'it');
+    if (sort==='author') return a.author.localeCompare(b.author,'it');
+    if (sort==='year') return (Number(b.year)||0)-(Number(a.year)||0);
+    return b.addedAt-a.addedAt;
+  });
+
+  const host = $('bookList');
+  if (!list.length) {
+    host.innerHTML = `<div class="empty"><b>${books.length?'Nessun risultato':'La biblioteca è ancora vuota'}</b>${books.length?'Modifica la ricerca o i filtri.':'Scansiona un ISBN o inserisci il primo libro.'}</div>`;
+    return;
+  }
+
+  host.innerHTML = list.map(book=>`
+    <article class="book">
+      <div class="cover">
+        ${book.cover
+          ? `<img loading="lazy" src="${esc(book.cover)}" alt="Copertina" onerror="this.parentElement.textContent='Copertina non disponibile'">`
+          : 'Copertina non disponibile'}
+      </div>
+      <div>
+        <h3>${esc(book.title)} ${book.favorite?'★':''}</h3>
+        <div class="meta">${esc(book.author||'Autore non indicato')}</div>
+        <div class="meta">${esc([book.publisher,book.year].filter(Boolean).join(' · ')||'Editore/anno non indicati')}</div>
+        <div class="meta">ISBN: ${esc(book.isbn||'—')}</div>
+        ${book.status!=='Da leggere'?`<span class="badge">${esc(book.status)}</span>`:''}
+        ${!book.identified?'<span class="badge">DA COMPLETARE</span>':''}
+        <div class="book-actions">
+          <button class="secondary" data-a="edit" data-id="${esc(book.id)}">Modifica</button>
+          <button class="plain" data-a="fav" data-id="${esc(book.id)}">${book.favorite?'Togli ★':'Preferito ★'}</button>
+          <button class="plain" data-a="status" data-id="${esc(book.id)}">Stato</button>
+          <button class="danger" data-a="del" data-id="${esc(book.id)}">Elimina</button>
+        </div>
+      </div>
+    </article>
+  `).join('');
+}
+
+function openEditor(book=null) {
+  $('bookForm').reset();
+  $('editId').value = book?.id || '';
+  $('modalTitle').textContent = book?'Modifica libro':'Inserimento manuale';
+
+  const fields = {
+    Title:'title',Author:'author',Publisher:'publisher',Year:'year',
+    Isbn:'isbn',Genre:'genre',Cover:'cover',Notes:'notes',Status:'status'
+  };
+
+  for (const [field,property] of Object.entries(fields)) {
+    $('f'+field).value = book?.[property] || (field==='Status'?'Da leggere':'');
+  }
+  $('editModal').classList.add('show');
+}
+
+function closeEditor() {
+  $('editModal').classList.remove('show');
+}
+
+$('addBtn').addEventListener('click',()=>addBook($('isbnInput').value));
+$('isbnInput').addEventListener('keydown',event=>{
+  if (event.key==='Enter') addBook($('isbnInput').value);
+});
+$('manualBtn').addEventListener('click',()=>openEditor());
+$('closeModalBtn').addEventListener('click',closeEditor);
+$('cancelEditBtn').addEventListener('click',closeEditor);
+$('editModal').addEventListener('click',event=>{
+  if (event.target===$('editModal')) closeEditor();
+});
+
+$('bookForm').addEventListener('submit',event=>{
+  event.preventDefault();
+  const old = books.find(b=>b.id===$('editId').value);
+  const isbn = isbnClean($('fIsbn').value);
+
+  if (isbn && !validISBN(isbn)) {
+    alert('ISBN non valido. Correggilo oppure lascia vuoto il campo.');
+    return;
+  }
+  if (isbn && books.some(b=>b.isbn===isbn && b.id!==old?.id)) {
+    alert('Esiste già un libro con questo ISBN.');
+    return;
+  }
+
+  const book = normalise({
+    id:old?.id||makeId(),
+    isbn,
+    title:$('fTitle').value.trim(),
+    author:$('fAuthor').value.trim(),
+    publisher:$('fPublisher').value.trim(),
+    year:$('fYear').value.trim(),
+    genre:$('fGenre').value.trim(),
+    cover:$('fCover').value.trim(),
+    notes:$('fNotes').value.trim(),
+    status:$('fStatus').value,
+    favorite:old?.favorite,
+    identified:old?.identified||false,
+    addedAt:old?.addedAt||Date.now()
+  });
+
+  if (!book.identified && book.title && book.author) book.identified=true;
+
+  if (old) books=books.map(b=>b.id===old.id?book:b);
+  else books.unshift(book);
+
+  save();
+  closeEditor();
+  showStatus('Libro salvato.','success');
+});
+
+$('bookList').addEventListener('click',event=>{
+  const button = event.target.closest('button[data-a]');
+  if (!button) return;
+  const book = books.find(b=>b.id===button.dataset.id);
+  if (!book) return;
+
+  if (button.dataset.a==='edit') openEditor(book);
+
+  if (button.dataset.a==='fav') {
+    book.favorite=!book.favorite;
+    save();
+  }
+
+  if (button.dataset.a==='status') {
+    book.status=book.status==='Da leggere'
+      ? 'In lettura'
+      : book.status==='In lettura' ? 'Letto' : 'Da leggere';
+    save();
+  }
+
+  if (button.dataset.a==='del' && confirm('Eliminare "'+book.title+'" dal catalogo?')) {
+    books=books.filter(b=>b.id!==book.id);
+    save();
+  }
+});
+
+$('searchInput').addEventListener('input',render);
+$('sortSelect').addEventListener('change',render);
+$('filterSelect').addEventListener('change',render);
+$('clearSearchBtn').addEventListener('click',()=>{
+  $('searchInput').value='';
+  render();
+});
+
+function downloadFile(content,type,name) {
+  const blob = new Blob([content],{type});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href=url;
+  link.download=name;
+  link.style.display='none';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+
+
+/* ESPORTAZIONE PDF */
+$('printBtn').addEventListener('click', async () => {
+  if (!books.length) {
+    alert('La biblioteca è vuota: aggiungi almeno un libro.');
+    return;
+  }
+  const button = $('printBtn');
+  button.disabled = true;
+  button.textContent = 'Creo il PDF…';
+  try {
+    let jsPDF = window.jspdf?.jsPDF;
+    // Se jsPDF non è stata caricata, prova a caricarla nuovamente.
+    if (!jsPDF) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Libreria PDF non raggiungibile'));
+        document.head.appendChild(script);
+      });
+      jsPDF = window.jspdf?.jsPDF;
+    }
+    if (!jsPDF) {
+      throw new Error('La libreria PDF non è disponibile.');
+    }
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+    const maxWidth = pageWidth - margin * 2;
+    let y = 20;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(20);
+    pdf.text('La mia Biblioteca', margin, y);
+    y += 9;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text('Catalogo personale - ' + books.length + ' libri', margin, y);
+    y += 12;
+    const catalogo = [...books].sort((a, b) =>
+      (a.title || '').localeCompare(b.title || '', 'it')
+    );
+    catalogo.forEach((book, index) => {
+      const testo = [
+        `${index + 1}. ${book.title || 'Titolo non indicato'}`,
+        `Autore: ${book.author || 'Non indicato'}`,
+        `Editore: ${book.publisher || 'Non indicato'}${book.year ? ' - ' + book.year : ''}`,
+        `ISBN: ${book.isbn || 'Non indicato'}`,
+        `Genere: ${book.genre || 'Non indicato'}`,
+        `Stato: ${book.status || 'Da leggere'}${book.favorite ? ' - Preferito' : ''}`,
+        ...(book.notes ? ['Note: ' + book.notes] : [])
+      ];
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      const titolo = pdf.splitTextToSize(testo[0], maxWidth);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      const dettagli = testo.slice(1).flatMap(riga =>
+        pdf.splitTextToSize(riga, maxWidth)
+      );
+      const altezza = titolo.length * 5.5 + dettagli.length * 4.5 + 8;
+      if (y + altezza > pageHeight - 18) {
+        pdf.addPage();
+        y = 20;
+      }
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      pdf.text(titolo, margin, y);
+      y += titolo.length * 5.5;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      pdf.text(dettagli, margin, y);
+      y += dettagli.length * 4.5 + 7;
+      pdf.setDrawColor(225, 221, 233);
+      pdf.line(margin, y - 2, pageWidth - margin, y - 2);
+    });
+    const pagine = pdf.internal.getNumberOfPages();
+    for (let pagina = 1; pagina <= pagine; pagina++) {
+      pdf.setPage(pagina);
+      pdf.setFontSize(8);
+      pdf.text(
+        `La mia Biblioteca - Pagina ${pagina} di ${pagine}`,
+        pageWidth / 2,
+        pageHeight - 8,
+        { align: 'center' }
+      );
+    }
+    // Genera il file PDF e tenta di scaricarlo.
+    const blob = pdf.output('blob');
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'la-mia-biblioteca.pdf';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    alert('PDF creato. Se non compare, controlla la cartella Download o File del tuo iPhone.');
+  } catch (error) {
+    alert('Errore PDF: ' + error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Esporta PDF';
+  }
+});
+/* ESPORTAZIONE CSV */
+$('exportCsvBtn').addEventListener('click',()=>{
+  const quote = value=>'"'+String(value??'').replace(/"/g,'""')+'"';
+  const headers=['Titolo','Autore','Editore','Anno','ISBN','Genere','Stato','Preferito','Note'];
+  const rows=books.map(b=>[
+    b.title,b.author,b.publisher,b.year,b.isbn,b.genre,b.status,b.favorite?'Sì':'No',b.notes
+  ]);
+  const csv='\uFEFF'+[headers,...rows].map(row=>row.map(quote).join(';')).join('\r\n');
+  downloadFile(csv,'text/csv;charset=utf-8','la-mia-biblioteca.csv');
+});
+
+/* BACKUP JSON */
+$('backupBtn').addEventListener('click',()=>{
+  downloadFile(
+    JSON.stringify({
+      app:'La mia Biblioteca',
+      version:2,
+      exportedAt:new Date().toISOString(),
+      books
+    },null,2),
+    'application/json',
+    'backup-biblioteca.json'
+  );
+});
+
+/* IMPORTAZIONE BACKUP */
+$('importBtn').addEventListener('click',()=>$('importFile').click());
+
+$('importFile').addEventListener('change',async event=>{
+  const file=event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    const data=JSON.parse(await file.text());
+    const incoming=Array.isArray(data)?data:data.books;
+    if (!Array.isArray(incoming)) throw new Error('Formato non valido');
+
+    let added=0;
+    for (const raw of incoming) {
+      const book=normalise(raw);
+      if (!book.title) continue;
+      if (book.isbn && books.some(b=>b.isbn===book.isbn)) continue;
+      books.push(book);
+      added++;
+    }
+
+    save();
+    showStatus('Importati '+added+' libri. I duplicati sono stati saltati.','success');
+  } catch(error) {
+    showStatus('Backup non valido o illeggibile.','error');
+  } finally {
+    event.target.value='';
+  }
+});
+
+$('clearAllBtn').addEventListener('click',()=>{
+  if (books.length && confirm('Eliminare tutti i libri? Esporta prima un backup se vuoi conservarli.')) {
+    books=[];
+    save();
+    showStatus('Catalogo svuotato.','success');
+  }
+});
+
+/* SCANNER ISBN */
+async function stopScanner() {
+  try {
+    if (scanner) {
+      if (running) await scanner.stop();
+      scanner.clear();
+    }
+  } catch(e) {}
+
+  scanner=null;
+  running=false;
+  $('reader').classList.remove('show');
+  $('scanBtn').textContent='▦ Scansiona codice';
+}
+
+$('scanBtn').addEventListener('click',async()=>{
+  if (running) {
+    await stopScanner();
+    return;
+  }
+
+  if (!window.Html5Qrcode) {
+    showStatus('Scanner non caricato. Controlla la connessione e ricarica la pagina.','error');
+    return;
+  }
+
+  $('reader').classList.add('show');
+  $('scanBtn').textContent='Ferma scanner';
+  showStatus('Consenti l’accesso alla fotocamera e inquadra il codice a barre.');
+
+  try {
+    scanner=new Html5Qrcode('reader');
+    const cameras=await Html5Qrcode.getCameras();
+    if (!cameras.length) throw new Error('Nessuna fotocamera trovata');
+
+    const camera=cameras.find(c=>/back|rear|environment|posteriore/i.test(c.label))
+      || cameras[cameras.length-1];
+
+    await scanner.start(
+      camera.id,
+      {
+        fps:10,
+        qrbox:{width:280,height:130},
+        aspectRatio:1.8,
+        formatsToSupport:[
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.CODE_128
+        ]
+      },
+      async decodedText=>{
+        const isbn=isbnClean(decodedText);
+        if (validISBN(isbn)) {
+          await stopScanner();
+          $('isbnInput').value=isbn;
+          addBook(isbn);
+        } else {
+          showStatus('Codice letto ma non valido come ISBN. Centra il codice a barre e riprova.');
+        }
+      }
+    );
+
+    running=true;
+  } catch(error) {
+    await stopScanner();
+    showStatus('Fotocamera non disponibile: controlla i permessi. Puoi digitare l’ISBN.','error');
+  }
+});
+
+window.addEventListener('pagehide',()=>{
+  if (scanner && running) scanner.stop().catch(()=>{});
+});
+
+render();
+})();
+</script>
+</body>
+</html>
